@@ -13,6 +13,8 @@ define(function (require, exports, module) {
         Factory             = app.getModule("engine/Factory"),
         MenuManager         = app.getModule("menu/MenuManager");
 
+    var LaravelPreferences  = require("LaravelPreferences");
+
 
     var unitTestPkg    = 'Tests::Unit';
     var featureTestPkg = 'Tests::Feature';
@@ -24,7 +26,7 @@ define(function (require, exports, module) {
 
     var angularServicePkg   = 'Angular::services';
     var angularInterfacePkg = 'Angular::interfaces';
-    
+
     var defaulErd = 'Data Model';
 
 
@@ -62,7 +64,6 @@ define(function (require, exports, module) {
         }
     }
 
-
     function _handleCreateLaravelServiceMRC(){
         var selected = SelectionManager.getSelected();
         if(typeof(selected) != 'undefined'){
@@ -70,7 +71,7 @@ define(function (require, exports, module) {
             if( itens.length == 3){
                 var diagram = DiagramManager.getCurrentDiagram();
 
-                
+
                 var controller = getControllerFromViewItems(itens);
                 console.log(controller);
                 var repository = getRepositoryFromViewItems(itens);
@@ -148,18 +149,18 @@ define(function (require, exports, module) {
                     var testView = Factory.createViewOf(testCls, diagram, viewOptions);
                     testView.fillColor = "#007c3e";
                     testView.fontColor = "#ffffff";
-                    // addAssociation(cumodel, diagram, testView, clsView, "UMLDependency"); 
+                    // addAssociation(cumodel, diagram, testView, clsView, "UMLDependency");
                 }else{
                     testCls = testCls[0];
                 }
 
                 addOpertion(testCls, "test" + capitalizeFirstLetter(scn));
-                    
+
                 // Add associaction
                 var views = Repository.getViewsOf( testCls );
                 for(var i=0;i<views.length;i++){
                     if( views[i] instanceof type.UMLClassView && views[i]._parent == diagram ){
-                        addAssociation(cumodel, diagram, views[i], clsView, "UMLDependency"); 
+                        addAssociation(cumodel, diagram, views[i], clsView, "UMLDependency");
                         break;
                     }
                 }
@@ -192,14 +193,17 @@ define(function (require, exports, module) {
         }
     }
 
+    function _handleCreateLaravelRepository(options) {
+        // If options is not passed, get from preference
+        options = LaravelPreferences.getGenOptions();
+        console.log(options);
 
-    function _handleCreateLaravelRepository() {
         var selected = SelectionManager.getSelected();
         if(typeof(selected) != 'undefined'){
-            
+
             var model = getCurrentModel( selected.getPath() );
             var diagram=DiagramManager.getCurrentDiagram();
-            
+
             /*********************************************************/
             console.log('Create a repository class to ' + selected.name + ' as ' + selected.name + 'Repository');
             var repositoryOptions = {
@@ -210,11 +214,11 @@ define(function (require, exports, module) {
                     elem.isAbstract= false;
                 }
             };
-            var pkg = Repository.select(repositoryPkg);
+            var pkg = Repository.select(options.repositoryPkg);
             var repositoryClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', repositoryOptions);
             addAttribute(repositoryClass, "modelClass");
 
-            //create UMLClassView to Repository 
+            //create UMLClassView to Repository
             var viewOptions = {
                 x: 640, //Left
                 y: 160  //Top
@@ -224,55 +228,57 @@ define(function (require, exports, module) {
             repositoryView.fontColor = "#000000";
 
             /*********************************************************/
-            console.log('Create a repository test class to ' + selected.name + ' as ' + selected.name + 'RepositoryTest');
-            var repositoryTestOptions = {
-                modelInitializer: function (elem) {
-                    elem.name = selected.name + 'RepositoryTest';
-                    elem.visibility = "public";
-                    elem.documentation = "";
-                    elem.isAbstract= false;
-                }
-            };
+            if(options.createTests){
+                console.log('Create a repository test class to ' + selected.name + ' as ' + selected.name + 'RepositoryTest');
+                var repositoryTestOptions = {
+                    modelInitializer: function (elem) {
+                        elem.name = selected.name + 'RepositoryTest';
+                        elem.visibility = "public";
+                        elem.documentation = "";
+                        elem.isAbstract= false;
+                    }
+                };
 
-            var pkg = Repository.select(unitTestPkg);
-            var repositoryTestClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', repositoryTestOptions);
+                var pkg = Repository.select(options.unitTestPkg);
+                var repositoryTestClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', repositoryTestOptions);
 
-            addOpertion(repositoryTestClass, "setUp");
-            var oper = addOpertion(repositoryTestClass, "testNewQuery");
-            oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r->newQuery());\n";
-        
-            var oper = addOpertion(repositoryTestClass, "testDoQuery");
-            oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
+                addOpertion(repositoryTestClass, "setUp");
+                var oper = addOpertion(repositoryTestClass, "testNewQuery");
+                oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r->newQuery());\n";
 
-            var oper = addOpertion(repositoryTestClass, "testFindById");
-            oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
-            
-            var oper = addOpertion(repositoryTestClass, "testListAll");
-            oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
-            
-            var oper = addOpertion(repositoryTestClass, "testUpdate");
-            oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
-            
-            var oper = addOpertion(repositoryTestClass, "testDelete");
-            oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
-            oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
-            
-            //create UMLClassView to Repository 
-            var viewOptions = {
-                x: 470, //Left
-                y: 265  //Top
-            };
-            var repositoryTestView = Factory.createViewOf(repositoryTestClass, diagram, viewOptions);
-            repositoryTestView.fillColor = "#007c3e";
-            repositoryTestView.fontColor = "#ffffff";
+                var oper = addOpertion(repositoryTestClass, "testDoQuery");
+                oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
 
-            addAssociation(model, diagram, repositoryTestView, repositoryView, "UMLDependency");
+                var oper = addOpertion(repositoryTestClass, "testFindById");
+                oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
+
+                var oper = addOpertion(repositoryTestClass, "testListAll");
+                oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
+
+                var oper = addOpertion(repositoryTestClass, "testUpdate");
+                oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
+
+                var oper = addOpertion(repositoryTestClass, "testDelete");
+                oper.specification = "\t\t$r = new " + selected.name + "Repository();\n";
+                oper.specification+= "$this->assertInstanceOf(RepositoryInterface::class, $r);\n";
+
+                //create UMLClassView to Repository
+                var viewOptions = {
+                    x: 470, //Left
+                    y: 265  //Top
+                };
+                var repositoryTestView = Factory.createViewOf(repositoryTestClass, diagram, viewOptions);
+                repositoryTestView.fillColor = "#007c3e";
+                repositoryTestView.fontColor = "#ffffff";
+
+                addAssociation(model, diagram, repositoryTestView, repositoryView, "UMLDependency");
+            }
 
             /*********************************************************/
             console.log('Create a controller class to ' + selected.name + ' as ' + selected.name + 'Controller');
@@ -286,12 +292,22 @@ define(function (require, exports, module) {
             };
 
 
-            var pkg = Repository.select(controllerPkg);
+            var pkg = Repository.select(options.controllerPkg);
             var controllerClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', controllerOptions);
-            addTextTag(controllerClass, "@Swagger", '@SWG\\Info(title="' +  selected.name + ' Controller REST API", version="1.0.0")');
+            if(options.phpDoc && options.phpDocSwagger){
+              controllerClass.documentation = '@SWG\\Info( title="' +  selected.name + ' Controller API", version="1.0.0" )';
+            }
 
             var oper = addOpertion(controllerClass, "save");
-            addTextTag(oper, "@Swagger", '@SWG\\Post(path="' + selected.name + '", summary="Save or update a new ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))');
+            if(options.phpDoc && options.phpDocMakrdown){
+              oper.documentation = "### Save\n";
+              oper.documentation+= "Save a new " + selected.name + " model to database\n\n";
+            }else if( options.phpDoc ){
+              oper.documentation = "Save a new " + selected.name + " model to database\n\n";
+            }
+            if(options.phpDoc && options.phpDocSwagger){
+              oper.documentation+= '@SWG\\Post(path="' + selected.name + '", summary="Save or update a new ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))';
+            }
             oper.specification = "\t\t$this->validate(\n";
             oper.specification+= "\t$request, [\n";
             oper.specification+= "\t]\n";
@@ -299,10 +315,26 @@ define(function (require, exports, module) {
             oper.specification+= "return response()->json([$" + selected.name.toLowerCase() +", $request]);\n";
 
             var oper = addOpertion(controllerClass, "delete");
-            addTextTag(oper, "@Swagger", '@SWG\\Delete(path="' + selected.name + '", summary="Delete a ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))');
+            if(options.phpDoc && options.phpDocMakrdown){
+              oper.documentation = "### Delete\n";
+              oper.documentation+= "Delete a specific " + selected.name + " model from database\n\n";
+            }else if( options.phpDoc ){
+              oper.documentation = "Delete a specific " + selected.name + " model from database\n\n";
+            }
+            if(options.phpDoc && options.phpDocSwagger){
+              oper.documentation+= '@SWG\\Delete(path="' + selected.name + '", summary="Delete a ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))';
+            }
 
             var oper = addOpertion(controllerClass, "update");
-            addTextTag(oper, "@Swagger", '@SWG\\Put(path="' + selected.name + '", summary="Update a ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))');
+            if(options.phpDoc && options.phpDocMakrdown){
+              oper.documentation = "### Update\n";
+              oper.documentation+= "Update a specific " + selected.name + " model in database\n\n";
+            }else if( options.phpDoc ){
+              oper.documentation = "Update a specific " + selected.name + " model in database\n\n";
+            }
+            if(options.phpDoc && options.phpDocSwagger){
+              oper.documentation+= '@SWG\\Put(path="' + selected.name + '", summary="Update a ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))';
+            }
             oper.specification = "\t\t$this->validate(\n";
             oper.specification+= "\t$request, [\n";
             oper.specification+= "\t]\n";
@@ -310,12 +342,28 @@ define(function (require, exports, module) {
             oper.specification+= "return response()->json([$" + selected.name.toLowerCase() +", $request]);\n";
 
             var oper = addOpertion(controllerClass, "list");
-            addTextTag(oper, "@Swagger", '@SWG\\Get(path="' + selected.name + '", summary="List all ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))');
+            if(options.phpDoc && options.phpDocMakrdown){
+              oper.documentation = "### List\n";
+              oper.documentation+= "Lists all " + selected.name + " model in database\n\n";
+            }else if( options.phpDoc ){
+              oper.documentation = "Lists all " + selected.name + " model in database\n\n";
+            }
+            if(options.phpDoc && options.phpDocSwagger){
+              oper.documentation+= '@SWG\\Get(path="' + selected.name + '", summary="List all ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))';
+            }
 
             var oper = addOpertion(controllerClass, "search");
-            addTextTag(oper, "@Swagger", '@SWG\\Get(path="' + selected.name + '", summary="Serach for one or many ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))');
+            if(options.phpDoc && options.phpDocMakrdown){
+              oper.documentation = "### Search\n";
+              oper.documentation+= "Serach all " + selected.name + " model in database based on Request parameters\n\n";
+            }else if( options.phpDoc ){
+              oper.documentation = "Serach all " + selected.name + " model in database based on Request parameters\n\n";
+            }
+            if(options.phpDoc && options.phpDocSwagger){
+              oper.documentation+= '@SWG\\Get(path="' + selected.name + '", summary="Serach for one or many ' + selected.name + '", @SWG\Response(response=200, description="A new or saved ' + selected.name + '"))';
+            }
 
-            //create UMLClassView to Controller 
+            //create UMLClassView to Controller
             var viewOptions = {
                 x: 200, // left
                 y: 160, // top
@@ -333,95 +381,95 @@ define(function (require, exports, module) {
 
             /*********************************************************/
             // Create Controller Test
-            console.log('Create a controller test class to ' + selected.name + ' as ' + selected.name + 'ControllerTest');
-            var controllerTestOptions = {
-                modelInitializer: function (elem) {
-                    elem.name = selected.name + 'ControllerTest';
-                    elem.visibility = "public";
-                    elem.documentation = "";
-                    elem.isAbstract= false;
-                }
-            };
+            if(options.createTests){
+                console.log('Create a controller test class to ' + selected.name + ' as ' + selected.name + 'ControllerTest');
+                var controllerTestOptions = {
+                    modelInitializer: function (elem) {
+                        elem.name = selected.name + 'ControllerTest';
+                        elem.visibility = "public";
+                        elem.documentation = "";
+                        elem.isAbstract= false;
+                    }
+                };
 
-            
-            var pkg = Repository.select(featureTestPkg);
-            var controllerTestClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', controllerTestOptions);
-            var oper   = addOpertion(controllerTestClass, "setUp");
 
-            var oper   = addOpertion(controllerTestClass, "testSave");
-            oper.documentation+= "Tests the method save() from " + selected.name + "Controller class";
+                var pkg = Repository.select(options.featureTestPkg);
+                var controllerTestClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', controllerTestOptions);
+                var oper   = addOpertion(controllerTestClass, "setUp");
 
-            oper.specification = "\t\t//Teting web version of controller\n";
-            oper.specification+= "\t\t$response = $this->post('/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+                var oper   = addOpertion(controllerTestClass, "testSave");
+                oper.documentation+= "Tests the method save() from " + selected.name + "Controller class";
 
-            oper.specification+= "\t\t//Teting api version of controller\n";
-            oper.specification+= "\t\t$response = $this->post('/api/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
-            
+                oper.specification = "\t\t//Teting web version of controller\n";
+                oper.specification+= "\t\t$response = $this->post('/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            var oper   = addOpertion(controllerTestClass, "testDelete");
-            oper.documentation+= "Tests the method delete() from " + selected.name + "Controller class";
+                oper.specification+= "\t\t//Teting api version of controller\n";
+                oper.specification+= "\t\t$response = $this->post('/api/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            oper.specification = "\t\t//Teting web version of controller\n";
-            oper.specification+= "\t\t$response = $this->delete('/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            oper.specification+= "\t\t//Teting api version of controller\n";
-            oper.specification+= "\t\t$response = $this->delete('/api/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
-            
-            
-            var oper   = addOpertion(controllerTestClass, "testUpdate");
-            oper.documentation+= "Tests the method update() from " + selected.name + "Controller class";
+                var oper   = addOpertion(controllerTestClass, "testDelete");
+                oper.documentation+= "Tests the method delete() from " + selected.name + "Controller class";
 
-            oper.specification = "\t\t//Teting web version of controller\n";
-            oper.specification+= "\t\t$response = $this->put('/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+                oper.specification = "\t\t//Teting web version of controller\n";
+                oper.specification+= "\t\t$response = $this->delete('/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            oper.specification+= "\t\t//Teting api version of controller\n";
-            oper.specification+= "\t\t$response = $this->put('/api/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
-            
-            
-            var oper   = addOpertion(controllerTestClass, "testList");
-            oper.documentation+= "Tests the method list() from " + selected.name + "Controller class";
+                oper.specification+= "\t\t//Teting api version of controller\n";
+                oper.specification+= "\t\t$response = $this->delete('/api/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            oper.specification = "\t\t//Teting web version of controller\n";
-            oper.specification+= "\t\t$response = $this->get('/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            oper.specification+= "\t\t//Teting api version of controller\n";
-            oper.specification+= "\t\t$response = $this->get('/api/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
-            
-            
-            var oper   = addOpertion(controllerTestClass, "testSearch");
-            oper.documentation+= "Tests the method search() from " + selected.name + "Controller class";
+                var oper   = addOpertion(controllerTestClass, "testUpdate");
+                oper.documentation+= "Tests the method update() from " + selected.name + "Controller class";
 
-            oper.specification = "\t\t//Teting web version of controller\n";
-            oper.specification+= "\t\t$response = $this->getput('/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+                oper.specification = "\t\t//Teting web version of controller\n";
+                oper.specification+= "\t\t$response = $this->put('/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            oper.specification+= "\t\t//Teting api version of controller\n";
-            oper.specification+= "\t\t$response = $this->get('/api/" + selected.name.toLowerCase() + "');\n";
-            oper.specification+= "\t\t$response->assertStatus(200);\n\n";
-            
-            
-            
+                oper.specification+= "\t\t//Teting api version of controller\n";
+                oper.specification+= "\t\t$response = $this->put('/api/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
 
-            //create UMLClassView to Controller Test
-            var viewOptions = {
-                x: 50, //Left
-                y: 265  //Top
-            };
-            var controllerTestView = Factory.createViewOf(controllerTestClass, diagram, viewOptions);
-            controllerTestView.fillColor = "#007c3e";
-            controllerTestView.fontColor = "#ffffff";
 
-            addAssociation(model, diagram, controllerTestView, controllerView, "UMLDependency");
+                var oper   = addOpertion(controllerTestClass, "testList");
+                oper.documentation+= "Tests the method list() from " + selected.name + "Controller class";
 
-            
+                oper.specification = "\t\t//Teting web version of controller\n";
+                oper.specification+= "\t\t$response = $this->get('/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+
+                oper.specification+= "\t\t//Teting api version of controller\n";
+                oper.specification+= "\t\t$response = $this->get('/api/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+
+
+                var oper   = addOpertion(controllerTestClass, "testSearch");
+                oper.documentation+= "Tests the method search() from " + selected.name + "Controller class";
+
+                oper.specification = "\t\t//Teting web version of controller\n";
+                oper.specification+= "\t\t$response = $this->getput('/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+
+                oper.specification+= "\t\t//Teting api version of controller\n";
+                oper.specification+= "\t\t$response = $this->get('/api/" + selected.name.toLowerCase() + "');\n";
+                oper.specification+= "\t\t$response->assertStatus(200);\n\n";
+
+
+
+
+                //create UMLClassView to Controller Test
+                var viewOptions = {
+                    x: 50, //Left
+                    y: 265  //Top
+                };
+                var controllerTestView = Factory.createViewOf(controllerTestClass, diagram, viewOptions);
+                controllerTestView.fillColor = "#007c3e";
+                controllerTestView.fontColor = "#ffffff";
+
+                addAssociation(model, diagram, controllerTestView, controllerView, "UMLDependency");
+            }
         }
     }
 
@@ -501,6 +549,12 @@ define(function (require, exports, module) {
         return null;
     }
 
+
+
+    function _handleConfigure() {
+        CommandManager.execute(Commands.FILE_PREFERENCES, LaravelPreferences.getId());
+    }
+
     // Add a HelloWorld command
     //var CMD_HELLOWORLD = "tools.helloworld";
     //CommandManager.register("Hello World", CMD_HELLOWORLD, handleHelloWorld);
@@ -538,7 +592,7 @@ define(function (require, exports, module) {
 
     CommandManager.register("Laravale Helper",   CMD_IMLARA,              CommandManager.doNothing);
     CommandManager.register("Create Repository", CMD_IMLARA_CREATE_REPO,  _handleCreateLaravelRepository);
-    CommandManager.register("Configuration",     CMD_IMLARA_CONFIG,       _handleCreateTest);
+    CommandManager.register("Configuration",     CMD_IMLARA_CONFIG,       _handleConfigure);
     CommandManager.register("About",             CMD_IMLARA_ABOUT,        _handleCreateTest);
     CommandManager.register("Create Service from M-R-C", CMD_IMLARA_CREATE_SERV,  _handleCreateLaravelServiceMRC);
 
@@ -559,27 +613,27 @@ define(function (require, exports, module) {
 
 
 
-    var CMD_IMDEGPAR             = 'imdegpar',
-        CMD_IMDEGPAR_CREATE_DECO = 'imdegpar.create.decorator',
-        CMD_IMDEGPAR_CREATE_COMP = 'imdegpar.create.composite',
-        CMD_IMDEGPAR_CONFIG      = 'imdegpar.configure',
-        CMD_IMDEGPAR_ABOUT       = 'imdegpar.about';
+    // var CMD_IMDEGPAR             = 'imdegpar',
+    //     CMD_IMDEGPAR_CREATE_DECO = 'imdegpar.create.decorator',
+    //     CMD_IMDEGPAR_CREATE_COMP = 'imdegpar.create.composite',
+    //     CMD_IMDEGPAR_CONFIG      = 'imdegpar.configure',
+    //     CMD_IMDEGPAR_ABOUT       = 'imdegpar.about';
 
 
-    CommandManager.register("Design Patterns",          CMD_IMDEGPAR,              CommandManager.doNothing);
-    CommandManager.register("Create Decorator Pattern", CMD_IMDEGPAR_CREATE_DECO,  _handleCreateLaravelRepository);
-    CommandManager.register("Create Composite Pattern", CMD_IMDEGPAR_CREATE_COMP,  _handleCreateLaravelRepository);
-    CommandManager.register("Configuration",            CMD_IMDEGPAR_CONFIG,       _handleCreateTest);
-    CommandManager.register("About",                    CMD_IMDEGPAR_ABOUT,        _handleCreateTest);
-
-    var menu, menuItem;
-    menu = MenuManager.getMenu(Commands.TOOLS);
-    menuItem = menu.addMenuItem(CMD_IMDEGPAR);
-    menuItem.addMenuItem(CMD_IMDEGPAR_CREATE_DECO);
-    menuItem.addMenuItem(CMD_IMDEGPAR_CREATE_COMP);
-
-    menuItem.addMenuDivider();
-    menuItem.addMenuItem(CMD_IMDEGPAR_CONFIG);
-    menuItem.addMenuItem(CMD_IMDEGPAR_ABOUT);
+    // CommandManager.register("Design Patterns",          CMD_IMDEGPAR,              CommandManager.doNothing);
+    // CommandManager.register("Create Decorator Pattern", CMD_IMDEGPAR_CREATE_DECO,  _handleCreateLaravelRepository);
+    // CommandManager.register("Create Composite Pattern", CMD_IMDEGPAR_CREATE_COMP,  _handleCreateLaravelRepository);
+    // CommandManager.register("Configuration",            CMD_IMDEGPAR_CONFIG,       _handleCreateTest);
+    // CommandManager.register("About",                    CMD_IMDEGPAR_ABOUT,        _handleCreateTest);
+    //
+    // var menu, menuItem;
+    // menu = MenuManager.getMenu(Commands.TOOLS);
+    // menuItem = menu.addMenuItem(CMD_IMDEGPAR);
+    // menuItem.addMenuItem(CMD_IMDEGPAR_CREATE_DECO);
+    // menuItem.addMenuItem(CMD_IMDEGPAR_CREATE_COMP);
+    //
+    // menuItem.addMenuDivider();
+    // menuItem.addMenuItem(CMD_IMDEGPAR_CONFIG);
+    // menuItem.addMenuItem(CMD_IMDEGPAR_ABOUT);
 
 });
