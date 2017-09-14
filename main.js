@@ -238,7 +238,6 @@ define(function (require, exports, module) {
                         elem.isAbstract= false;
                     }
                 };
-
                 var pkg = Repository.select(options.unitTestPkg);
                 var repositoryTestClass = Factory.createModel("UMLClass", pkg[0], 'ownedElements', repositoryTestOptions);
 
